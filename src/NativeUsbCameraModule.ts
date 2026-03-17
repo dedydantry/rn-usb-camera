@@ -1,4 +1,4 @@
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+import { NativeEventEmitter, Platform } from 'react-native';
 import type {
   UsbCameraModuleInterface,
   UsbDevice,
@@ -8,39 +8,15 @@ import type {
   RecordingCompleteEvent,
   AudioRecordingCompleteEvent,
 } from './types';
-
-const UNSUPPORTED_ERROR =
-  'rn-usb-camera is only supported on Android. USB UVC cameras require Android USB Host API.';
-
-const LINKING_ERROR =
-  "The package 'rn-usb-camera' doesn't seem to be linked. Make sure:\n\n" +
-  '- You rebuilt the app after installing the package\n' +
-  '- You are not using Expo Go\n';
+import NativeRnUsbCamera from './NativeRnUsbCamera';
 
 /** Whether the current platform supports USB cameras */
 export const isSupported = Platform.OS === 'android';
 
-function unsupportedPromise<T>(fallback: T): Promise<T> {
-  return Promise.reject(new Error(UNSUPPORTED_ERROR));
-}
+const unsupportedPromise = <T>(val: T): Promise<T> =>
+  Promise.reject(new Error('USB Camera is only supported on Android'));
 
-const NativeModule =
-  Platform.OS === 'android'
-    ? NativeModules.RnUsbCamera ??
-      new Proxy(
-        {},
-        {
-          get() {
-            throw new Error(LINKING_ERROR);
-          },
-        },
-      )
-    : null;
-
-const eventEmitter =
-  Platform.OS === 'android' && NativeModules.RnUsbCamera != null
-    ? new NativeEventEmitter(NativeModules.RnUsbCamera)
-    : null;
+const eventEmitter = isSupported ? new NativeEventEmitter(NativeRnUsbCamera) : null;
 
 export const UsbCamera: UsbCameraModuleInterface & {
   /** Whether the current platform supports USB cameras (Android only) */
@@ -58,149 +34,149 @@ export const UsbCamera: UsbCameraModuleInterface & {
   // ── Device ────────────────────────────────────────────────────────────
   getDeviceList(): Promise<UsbDevice[]> {
     if (!isSupported) return Promise.resolve([]);
-    return NativeModule!.getDeviceList();
+    return NativeRnUsbCamera.getDeviceList();
   },
   requestPermission(deviceId: number): Promise<boolean> {
     if (!isSupported) return unsupportedPromise(false);
-    return NativeModule!.requestPermission(deviceId);
+    return NativeRnUsbCamera.requestPermission(deviceId);
   },
   isCameraOpened(): Promise<boolean> {
     if (!isSupported) return Promise.resolve(false);
-    return NativeModule!.isCameraOpened();
+    return NativeRnUsbCamera.isCameraOpened();
   },
   openCamera(): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.openCamera();
+    return NativeRnUsbCamera.openCamera();
   },
   closeCamera(): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.closeCamera();
+    return NativeRnUsbCamera.closeCamera();
   },
 
   // ── Preview ───────────────────────────────────────────────────────────
   getAllPreviewSizes(): Promise<PreviewSize[]> {
     if (!isSupported) return Promise.resolve([]);
-    return NativeModule!.getAllPreviewSizes();
+    return NativeRnUsbCamera.getAllPreviewSizes();
   },
   getCurrentResolution(): Promise<PreviewSize> {
     if (!isSupported) return unsupportedPromise({ width: 0, height: 0 });
-    return NativeModule!.getCurrentResolution();
+    return NativeRnUsbCamera.getCurrentResolution();
   },
   updateResolution(width: number, height: number): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.updateResolution(width, height);
+    return NativeRnUsbCamera.updateResolution(width, height);
   },
 
   // ── Capture ───────────────────────────────────────────────────────────
   captureImage(path?: string | null): Promise<string> {
     if (!isSupported) return unsupportedPromise('');
-    return NativeModule!.captureImage(path ?? null);
+    return NativeRnUsbCamera.captureImage(path ?? null);
   },
 
   // ── Video Recording ───────────────────────────────────────────────────
   startRecording(path?: string | null, durationSec: number = 0): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.startRecording(path ?? null, durationSec);
+    return NativeRnUsbCamera.startRecording(path ?? null, durationSec);
   },
   stopRecording(): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.stopRecording();
+    return NativeRnUsbCamera.stopRecording();
   },
   isRecording(): Promise<boolean> {
     if (!isSupported) return Promise.resolve(false);
-    return NativeModule!.isRecording();
+    return NativeRnUsbCamera.isRecording();
   },
 
   // ── Audio Recording ───────────────────────────────────────────────────
   startAudioRecording(path?: string | null): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.startAudioRecording(path ?? null);
+    return NativeRnUsbCamera.startAudioRecording(path ?? null);
   },
   stopAudioRecording(): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
-    return NativeModule!.stopAudioRecording();
+    return NativeRnUsbCamera.stopAudioRecording();
   },
 
   // ── Camera Controls ───────────────────────────────────────────────────
   getSupportedControls(): Promise<SupportedControls> {
     if (!isSupported) return unsupportedPromise({} as SupportedControls);
-    return NativeModule!.getSupportedControls();
+    return NativeRnUsbCamera.getSupportedControls();
   },
   setBrightness(value: number) {
     if (!isSupported) return;
-    NativeModule!.setBrightness(value);
+    NativeRnUsbCamera.setBrightness(value);
   },
   getBrightness(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getBrightness();
+    return NativeRnUsbCamera.getBrightness();
   },
   setContrast(value: number) {
     if (!isSupported) return;
-    NativeModule!.setContrast(value);
+    NativeRnUsbCamera.setContrast(value);
   },
   getContrast(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getContrast();
+    return NativeRnUsbCamera.getContrast();
   },
   setZoom(value: number) {
     if (!isSupported) return;
-    NativeModule!.setZoom(value);
+    NativeRnUsbCamera.setZoom(value);
   },
   getZoom(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getZoom();
+    return NativeRnUsbCamera.getZoom();
   },
   setSharpness(value: number) {
     if (!isSupported) return;
-    NativeModule!.setSharpness(value);
+    NativeRnUsbCamera.setSharpness(value);
   },
   getSharpness(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getSharpness();
+    return NativeRnUsbCamera.getSharpness();
   },
   setSaturation(value: number) {
     if (!isSupported) return;
-    NativeModule!.setSaturation(value);
+    NativeRnUsbCamera.setSaturation(value);
   },
   getSaturation(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getSaturation();
+    return NativeRnUsbCamera.getSaturation();
   },
   setHue(value: number) {
     if (!isSupported) return;
-    NativeModule!.setHue(value);
+    NativeRnUsbCamera.setHue(value);
   },
   getHue(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getHue();
+    return NativeRnUsbCamera.getHue();
   },
   setGamma(value: number) {
     if (!isSupported) return;
-    NativeModule!.setGamma(value);
+    NativeRnUsbCamera.setGamma(value);
   },
   getGamma(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getGamma();
+    return NativeRnUsbCamera.getGamma();
   },
   setGain(value: number) {
     if (!isSupported) return;
-    NativeModule!.setGain(value);
+    NativeRnUsbCamera.setGain(value);
   },
   getGain(): Promise<number> {
     if (!isSupported) return Promise.resolve(0);
-    return NativeModule!.getGain();
+    return NativeRnUsbCamera.getGain();
   },
   setAutoFocus(enable: boolean) {
     if (!isSupported) return;
-    NativeModule!.setAutoFocus(enable);
+    NativeRnUsbCamera.setAutoFocus(enable);
   },
   setAutoWhiteBalance(enable: boolean) {
     if (!isSupported) return;
-    NativeModule!.setAutoWhiteBalance(enable);
+    NativeRnUsbCamera.setAutoWhiteBalance(enable);
   },
   resetAllControls() {
     if (!isSupported) return;
-    NativeModule!.resetAllControls();
+    NativeRnUsbCamera.resetAllControls();
   },
 
   // ── Events ────────────────────────────────────────────────────────────

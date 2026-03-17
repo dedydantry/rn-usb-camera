@@ -14,6 +14,7 @@ buildscript {
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.facebook.react'
 
 android {
     namespace "com.rnusbcamera"
@@ -32,6 +33,12 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+
+    sourceSets {
+        main {
+            java.srcDirs += "${buildDir}/generated/source/codegen/java"
+        }
+    }
 }
 
 repositories {
@@ -40,8 +47,8 @@ repositories {
 }
 
 dependencies {
-    //noinspection GradleDynamicVersion
-    implementation "com.facebook.react:react-android:+"
+    // React Native (version substituted by RNGP)
+    implementation "com.facebook.react:react-android"
 
     // AUSBC USB Camera library (extracted JARs + JNI bundled directly)
     implementation fileTree(dir: 'libs', include: ['*.jar'])

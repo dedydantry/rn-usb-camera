@@ -1,6 +1,6 @@
 {
   "name": "rn-usb-camera",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "React Native library for Android USB (UVC) camera powered by AUSBC",
   "main": "src/index",
   "source": "src/index.ts",
@@ -15,14 +15,20 @@
   "scripts": {
     "typescript": "tsc --noEmit"
   },
+  "codegenConfig": {
+    "name": "RnUsbCameraSpec",
+    "type": "modules",
+    "jsSrcsDir": "./src",
+    "android": {
+      "javaPackageName": "com.rnusbcamera"
+    }
+  },
   "peerDependencies": {
     "react": "*",
     "react-native": "*"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
-    "react": "^18.0.0",
-    "react-native": "^0.73.0",
     "typescript": "^5.0.0"
   }
 }

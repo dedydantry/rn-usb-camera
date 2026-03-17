@@ -3,12 +3,14 @@ package com.rnusbcamera
 import android.hardware.usb.UsbDevice
 import java.io.File
 import com.facebook.react.bridge.*
+import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.jiangdg.ausbc.callback.ICaptureCallBack
 import com.jiangdg.ausbc.camera.CameraUVC
 
+@ReactModule(name = RnUsbCameraModule.NAME)
 class RnUsbCameraModule(reactContext: ReactApplicationContext) :
-    ReactContextBaseJavaModule(reactContext) {
+    NativeRnUsbCameraSpec(reactContext) {
 
     companion object {
         const val NAME = "RnUsbCamera"
@@ -19,7 +21,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     // ── Device List ──────────────────────────────────────────────────────
 
     @ReactMethod
-    fun getDeviceList(promise: Promise) {
+    override fun getDeviceList(promise: Promise) {
         try {
             val client = CameraHolder.client
             if (client == null) {
@@ -43,16 +45,17 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun requestPermission(deviceId: Int, promise: Promise) {
+    override fun requestPermission(deviceId: Double, promise: Promise) {
         try {
+            val id = deviceId.toInt()
             val client = CameraHolder.client ?: run {
                 promise.reject("ERR_NO_CLIENT", "USB client not initialized. Mount UsbCameraView first.")
                 return
             }
             val devices = client.getDeviceList(null) ?: emptyList()
-            val device = devices.find { it.deviceId == deviceId }
+            val device = devices.find { it.deviceId == id }
             if (device == null) {
-                promise.reject("ERR_DEVICE_NOT_FOUND", "Device with id $deviceId not found")
+                promise.reject("ERR_DEVICE_NOT_FOUND", "Device with id $id not found")
                 return
             }
             val result = client.requestPermission(device)
@@ -65,12 +68,12 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     // ── Camera State ─────────────────────────────────────────────────────
 
     @ReactMethod
-    fun isCameraOpened(promise: Promise) {
+    override fun isCameraOpened(promise: Promise) {
         promise.resolve(CameraHolder.isReady())
     }
 
     @ReactMethod
-    fun openCamera(promise: Promise) {
+    override fun openCamera(promise: Promise) {
         try {
             val view = CameraHolder.cameraView ?: run {
                 promise.reject("ERR_NO_VIEW", "UsbCameraView not mounted")
@@ -88,7 +91,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun closeCamera(promise: Promise) {
+    override fun closeCamera(promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.resolve(null)
@@ -104,7 +107,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     // ── Preview Sizes ────────────────────────────────────────────────────
 
     @ReactMethod
-    fun getAllPreviewSizes(promise: Promise) {
+    override fun getAllPreviewSizes(promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.resolve(Arguments.createArray())
@@ -125,7 +128,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun getCurrentResolution(promise: Promise) {
+    override fun getCurrentResolution(promise: Promise) {
         try {
             val request = CameraHolder.camera?.getCameraRequest()
             if (request == null) {
@@ -142,7 +145,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun updateResolution(width: Int, height: Int, promise: Promise) {
+    override fun updateResolution(width: Double, height: Double, promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -150,7 +153,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
             }
             // Fire loading event on the view before resolution change
             CameraHolder.cameraView?.sendLoadingEvent()
-            camera.updateResolution(width, height)
+            camera.updateResolution(width.toInt(), height.toInt())
             promise.resolve(null)
         } catch (e: Exception) {
             promise.reject("ERR_RESOLUTION", e.message, e)
@@ -188,7 +191,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun captureImage(path: String?, promise: Promise) {
+    override fun captureImage(path: String?, promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -212,7 +215,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     // ── Video Recording ──────────────────────────────────────────────────
 
     @ReactMethod
-    fun startRecording(path: String?, durationSec: Int, promise: Promise) {
+    override fun startRecording(path: String?, durationSec: Double, promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -238,7 +241,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun stopRecording(promise: Promise) {
+    override fun stopRecording(promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -252,14 +255,14 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun isRecording(promise: Promise) {
+    override fun isRecording(promise: Promise) {
         promise.resolve(CameraHolder.camera?.isRecording() == true)
     }
 
     // ── Audio Recording ──────────────────────────────────────────────────
 
     @ReactMethod
-    fun startAudioRecording(path: String?, promise: Promise) {
+    override fun startAudioRecording(path: String?, promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -285,7 +288,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun stopAudioRecording(promise: Promise) {
+    override fun stopAudioRecording(promise: Promise) {
         try {
             CameraHolder.camera?.captureAudioStop()
             promise.resolve(null)
@@ -297,7 +300,7 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     // ── UVC Camera Controls ──────────────────────────────────────────────
 
     @ReactMethod
-    fun getSupportedControls(promise: Promise) {
+    override fun getSupportedControls(promise: Promise) {
         val cam = CameraHolder.camera as? CameraUVC
         if (cam == null) {
             promise.reject("ERR_NO_CAMERA", "Camera not opened")
@@ -327,105 +330,105 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun setBrightness(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setBrightness(value)
+    override fun setBrightness(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setBrightness(value.toInt())
     }
 
     @ReactMethod
-    fun getBrightness(promise: Promise) {
+    override fun getBrightness(promise: Promise) {
         val brightness = (CameraHolder.camera as? CameraUVC)?.getBrightness() ?: 0
         promise.resolve(brightness)
     }
 
     @ReactMethod
-    fun setContrast(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setContrast(value)
+    override fun setContrast(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setContrast(value.toInt())
     }
 
     @ReactMethod
-    fun getContrast(promise: Promise) {
+    override fun getContrast(promise: Promise) {
         val contrast = (CameraHolder.camera as? CameraUVC)?.getContrast() ?: 0
         promise.resolve(contrast)
     }
 
     @ReactMethod
-    fun setZoom(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setZoom(value)
+    override fun setZoom(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setZoom(value.toInt())
     }
 
     @ReactMethod
-    fun getZoom(promise: Promise) {
+    override fun getZoom(promise: Promise) {
         val zoom = (CameraHolder.camera as? CameraUVC)?.getZoom() ?: 0
         promise.resolve(zoom)
     }
 
     @ReactMethod
-    fun setSharpness(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setSharpness(value)
+    override fun setSharpness(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setSharpness(value.toInt())
     }
 
     @ReactMethod
-    fun getSharpness(promise: Promise) {
+    override fun getSharpness(promise: Promise) {
         val sharpness = (CameraHolder.camera as? CameraUVC)?.getSharpness() ?: 0
         promise.resolve(sharpness)
     }
 
     @ReactMethod
-    fun setSaturation(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setSaturation(value)
+    override fun setSaturation(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setSaturation(value.toInt())
     }
 
     @ReactMethod
-    fun getSaturation(promise: Promise) {
+    override fun getSaturation(promise: Promise) {
         val saturation = (CameraHolder.camera as? CameraUVC)?.getSaturation() ?: 0
         promise.resolve(saturation)
     }
 
     @ReactMethod
-    fun setHue(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setHue(value)
+    override fun setHue(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setHue(value.toInt())
     }
 
     @ReactMethod
-    fun getHue(promise: Promise) {
+    override fun getHue(promise: Promise) {
         val hue = (CameraHolder.camera as? CameraUVC)?.getHue() ?: 0
         promise.resolve(hue)
     }
 
     @ReactMethod
-    fun setGamma(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setGamma(value)
+    override fun setGamma(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setGamma(value.toInt())
     }
 
     @ReactMethod
-    fun getGamma(promise: Promise) {
+    override fun getGamma(promise: Promise) {
         val gamma = (CameraHolder.camera as? CameraUVC)?.getGamma() ?: 0
         promise.resolve(gamma)
     }
 
     @ReactMethod
-    fun setGain(value: Int) {
-        (CameraHolder.camera as? CameraUVC)?.setGain(value)
+    override fun setGain(value: Double) {
+        (CameraHolder.camera as? CameraUVC)?.setGain(value.toInt())
     }
 
     @ReactMethod
-    fun getGain(promise: Promise) {
+    override fun getGain(promise: Promise) {
         val gain = (CameraHolder.camera as? CameraUVC)?.getGain() ?: 0
         promise.resolve(gain)
     }
 
     @ReactMethod
-    fun setAutoFocus(enable: Boolean) {
+    override fun setAutoFocus(enable: Boolean) {
         (CameraHolder.camera as? CameraUVC)?.setAutoFocus(enable)
     }
 
     @ReactMethod
-    fun setAutoWhiteBalance(enable: Boolean) {
+    override fun setAutoWhiteBalance(enable: Boolean) {
         (CameraHolder.camera as? CameraUVC)?.setAutoWhiteBalance(enable)
     }
 
     @ReactMethod
-    fun resetAllControls() {
+    override fun resetAllControls() {
         (CameraHolder.camera as? CameraUVC)?.apply {
             resetBrightness()
             resetContrast()
@@ -448,12 +451,12 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun addListener(eventName: String) {
+    override fun addListener(eventName: String) {
         // Required for RN event emitter
     }
 
     @ReactMethod
-    fun removeListeners(count: Int) {
+    override fun removeListeners(count: Double) {
         // Required for RN event emitter
     }
 }
