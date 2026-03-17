@@ -34,31 +34,6 @@ android {
     }
 }
 
-// Inject AUSBC local Maven repo so dependencies resolve in any consumer project
-def ausbcMavenDir = new File(projectDir, "maven-repo")
-if (!ausbcMavenDir.exists()) {
-    throw new GradleException("[rn-usb-camera] Missing android/maven-repo directory. " +
-        "Please reinstall the rn-usb-camera package.")
-}
-def ausbcMavenUrl = ausbcMavenDir.toURI()
-
-// Add to all projects (covers standard RN project setups)
-rootProject.allprojects { p ->
-    p.repositories {
-        maven { url ausbcMavenUrl }
-    }
-}
-
-// Belt & suspenders: also inject after all projects are evaluated
-// This handles cases where :app is evaluated before :rn-usb-camera
-project.gradle.projectsEvaluated {
-    rootProject.allprojects { p ->
-        p.repositories {
-            maven { url ausbcMavenUrl }
-        }
-    }
-}
-
 repositories {
     google()
     mavenCentral()
@@ -68,8 +43,13 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-android:+"
 
-    // AUSBC USB Camera library (bundled local Maven repo with Android 10+ MediaStore fix)
-    implementation "com.rnusbcamera.ausbc:libausbc:3.4.5"
-    implementation "com.rnusbcamera.ausbc:libuvc:3.4.5"
-    implementation "com.rnusbcamera.ausbc:libnative:3.4.5"
+    // AUSBC USB Camera library (extracted JARs + JNI bundled directly)
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Transitive dependencies required by AUSBC
+    implementation "androidx.appcompat:appcompat:1.3.1"
+    implementation "androidx.constraintlayout:constraintlayout:2.0.4"
+    implementation "com.google.android.material:material:1.3.0"
+    implementation "androidx.core:core-ktx:1.3.2"
+    implementation "com.elvishew:xlog:1.11.0"
 }
