@@ -68,8 +68,8 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-android:+"
 
-    // AUSBC USB Camera library (local Maven repo with Android 10+ MediaStore fix)
-    implementation "com.github.ernestp:libausbc:3.4.5"
-    implementation "com.github.ernestp:libuvc:3.4.5"
-    implementation "com.github.ernestp:libnative:3.4.5"
+    // AUSBC USB Camera library (bundled local Maven repo with Android 10+ MediaStore fix)
+    implementation "com.rnusbcamera.ausbc:libausbc:3.4.5"
+    implementation "com.rnusbcamera.ausbc:libuvc:3.4.5"
+    implementation "com.rnusbcamera.ausbc:libnative:3.4.5"
 }
