@@ -34,15 +34,27 @@ android {
     }
 }
 
-// Inject local Maven repo into root project so AUSBC dependencies resolve in any consumer
-def ausbcMavenRepo = "$projectDir/maven-repo"
-rootProject.allprojects {
-    repositories {
-        maven {
-            url ausbcMavenRepo
-            content {
-                includeGroup "com.github.ernestp"
-            }
+// Inject AUSBC local Maven repo so dependencies resolve in any consumer project
+def ausbcMavenDir = new File(projectDir, "maven-repo")
+if (!ausbcMavenDir.exists()) {
+    throw new GradleException("[rn-usb-camera] Missing android/maven-repo directory. " +
+        "Please reinstall the rn-usb-camera package.")
+}
+def ausbcMavenUrl = ausbcMavenDir.toURI()
+
+// Add to all projects (covers standard RN project setups)
+rootProject.allprojects { p ->
+    p.repositories {
+        maven { url ausbcMavenUrl }
+    }
+}
+
+// Belt & suspenders: also inject after all projects are evaluated
+// This handles cases where :app is evaluated before :rn-usb-camera
+project.gradle.projectsEvaluated {
+    rootProject.allprojects { p ->
+        p.repositories {
+            maven { url ausbcMavenUrl }
         }
     }
 }
@@ -50,7 +62,6 @@ rootProject.allprojects {
 repositories {
     google()
     mavenCentral()
-    maven { url "https://jitpack.io" }
 }
 
 dependencies {
