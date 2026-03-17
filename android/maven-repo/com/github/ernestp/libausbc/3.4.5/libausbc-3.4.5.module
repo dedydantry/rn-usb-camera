@@ -1,0 +1,152 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.github.ernestp",
+    "module": "libausbc",
+    "version": "3.4.5",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.13"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "com.elvishew",
+          "module": "xlog",
+          "version": {
+            "requires": "1.11.0"
+          }
+        },
+        {
+          "group": "com.github.ernestp",
+          "module": "libnative",
+          "version": {
+            "requires": "3.4.5"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "libausbc-3.4.5.aar",
+          "url": "libausbc-3.4.5.aar",
+          "size": 383364,
+          "sha512": "a316a0d99dc615e02de0ed030d256932e237416a14ac6ecdbb0e85c14ad3c011df180ef5827530ef4fc3a22c0e297a0cfb160000078e5d81798859decd2e2a9c",
+          "sha256": "34cefae8940f00a440dfca4b5a30671526cf3e6ec49e5080963c501d0f900b02",
+          "sha1": "57fe46a49cd8af6bd5c992fc3c0ba2d36ce4068b",
+          "md5": "9be47a0f5162a0b15bc6fbc73d489159"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.appcompat",
+          "module": "appcompat",
+          "version": {
+            "requires": "1.3.1"
+          }
+        },
+        {
+          "group": "androidx.constraintlayout",
+          "module": "constraintlayout",
+          "version": {
+            "requires": "2.0.4"
+          }
+        },
+        {
+          "group": "com.google.android.material",
+          "module": "material",
+          "version": {
+            "requires": "1.3.0"
+          }
+        },
+        {
+          "group": "com.github.ernestp",
+          "module": "libuvc",
+          "version": {
+            "requires": "3.4.5"
+          }
+        },
+        {
+          "group": "com.elvishew",
+          "module": "xlog",
+          "version": {
+            "requires": "1.11.0"
+          }
+        },
+        {
+          "group": "com.github.ernestp",
+          "module": "libnative",
+          "version": {
+            "requires": "3.4.5"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "libausbc-3.4.5.aar",
+          "url": "libausbc-3.4.5.aar",
+          "size": 383364,
+          "sha512": "a316a0d99dc615e02de0ed030d256932e237416a14ac6ecdbb0e85c14ad3c011df180ef5827530ef4fc3a22c0e297a0cfb160000078e5d81798859decd2e2a9c",
+          "sha256": "34cefae8940f00a440dfca4b5a30671526cf3e6ec49e5080963c501d0f900b02",
+          "sha1": "57fe46a49cd8af6bd5c992fc3c0ba2d36ce4068b",
+          "md5": "9be47a0f5162a0b15bc6fbc73d489159"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "libausbc-3.4.5-sources.jar",
+          "url": "libausbc-3.4.5-sources.jar",
+          "size": 148527,
+          "sha512": "d0b243f31e624ec2956f33ac7c47981577c77006f8440eedb7ab9a8015f9c718c046b1cb80c32a6930397cf4e29eaa9f61ca43ccb745a6636893d568f5d461f0",
+          "sha256": "66636483cc4e11aacdd1db9ec9c488906410fe71ddd2e1dd924bcac2a897eb77",
+          "sha1": "35875618c7ec34adb863c4bb52d47a02da16d481",
+          "md5": "7504faf481af659d98c878c9648705d2"
+        }
+      ]
+    }
+  ]
+}

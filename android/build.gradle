@@ -34,6 +34,19 @@ android {
     }
 }
 
+// Inject local Maven repo into root project so AUSBC dependencies resolve in any consumer
+def ausbcMavenRepo = "$projectDir/maven-repo"
+rootProject.allprojects {
+    repositories {
+        maven {
+            url ausbcMavenRepo
+            content {
+                includeGroup "com.github.ernestp"
+            }
+        }
+    }
+}
+
 repositories {
     google()
     mavenCentral()
@@ -44,8 +57,8 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-android:+"
 
-    // AUSBC USB Camera library (local project with Android 10+ MediaStore fix)
-    implementation project(':libausbc')
-    implementation project(':libuvc')
-    implementation project(':libnative')
+    // AUSBC USB Camera library (local Maven repo with Android 10+ MediaStore fix)
+    implementation "com.github.ernestp:libausbc:3.4.5"
+    implementation "com.github.ernestp:libuvc:3.4.5"
+    implementation "com.github.ernestp:libnative:3.4.5"
 }

@@ -4,11 +4,3 @@ extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autoli
 rootProject.name = 'RnUsbCameraExample'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
-
-// AUSBC local modules
-include ':libausbc'
-project(':libausbc').projectDir = new File('../../../AndroidUSBCamera/libausbc')
-include ':libuvc'
-project(':libuvc').projectDir = new File('../../../AndroidUSBCamera/libuvc')
-include ':libnative'
-project(':libnative').projectDir = new File('../../../AndroidUSBCamera/libnative')

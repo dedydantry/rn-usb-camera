@@ -6,17 +6,6 @@ buildscript {
         targetSdkVersion = 34
         ndkVersion = "26.1.10909125"
         kotlinVersion = "1.9.25"
-
-        // AUSBC library variables
-        versionCompiler = 35
-        versionTarget = 34
-        versionCode = 127
-        versionNameString = '3.4.5'
-        javaSourceCompatibility = JavaVersion.VERSION_17
-        javaTargetCompatibility = JavaVersion.VERSION_17
-        androidXVersion = '1.3.1'
-        constraintlayoutVersion = '2.0.4'
-        materialVersion = '1.3.0'
     }
     repositories {
         google()
