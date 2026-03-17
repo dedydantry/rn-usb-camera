@@ -10,7 +10,11 @@ import com.jiangdg.ausbc.camera.CameraUVC
 class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "RnUsbCamera"
+    companion object {
+        const val NAME = "RnUsbCamera"
+    }
+
+    override fun getName(): String = NAME
 
     // ── Device List ──────────────────────────────────────────────────────
 
