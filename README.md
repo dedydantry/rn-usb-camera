@@ -22,9 +22,11 @@ Open any USB UVC camera on Android without root — no system camera permissions
 
 | | Minimum |
 |---|---|
-| React Native | 0.73+ |
+| React Native | 0.80+ |
 | Android SDK | API 23 (Android 6.0) |
 | Device | USB OTG support required |
+
+> This library is implemented as a New Architecture TurboModule. For Android, enable the New Architecture in your React Native app.
 
 ## Installation
 
@@ -36,7 +38,14 @@ yarn add rn-usb-camera
 
 ### Android Setup
 
-#### 1. Register the package
+#### 1. Enable the New Architecture
+
+This library targets the New Architecture only.
+
+- React Native 0.80+: set `newArchEnabled=true` in your Android `gradle.properties`
+- Reinstall native dependencies and rebuild the app after changing it
+
+#### 2. Register the package
 
 **React Native 0.73+ with autolinking** — no manual linking needed if your app uses the standard autolinking setup.
 
@@ -53,7 +62,7 @@ protected List<ReactPackage> getPackages() {
 }
 ```
 
-#### 2. USB host feature (optional)
+#### 3. USB host feature (optional)
 
 The library's `AndroidManifest.xml` already declares `android.hardware.usb.host` (with `required="false"`). If your app **requires** a USB host, you can add this to your app's `AndroidManifest.xml`:
 
@@ -61,7 +70,7 @@ The library's `AndroidManifest.xml` already declares `android.hardware.usb.host`
 <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 ```
 
-#### 3. Rebuild
+#### 4. Rebuild
 
 ```bash
 npx react-native run-android
