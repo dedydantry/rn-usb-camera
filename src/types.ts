@@ -35,6 +35,10 @@ export interface CameraClosedEvent {
   nativeEvent: {};
 }
 
+export interface CameraLoadingEvent {
+  nativeEvent: {};
+}
+
 export interface CameraErrorEvent {
   nativeEvent: { message: string };
 }
@@ -45,6 +49,26 @@ export interface RecordingCompleteEvent {
 
 export interface AudioRecordingCompleteEvent {
   path: string;
+}
+
+// ── Camera Controls ──────────────────────────────────────────────────────
+
+export interface CameraControlInfo {
+  supported: boolean;
+  min: number;
+  max: number;
+  current: number;
+}
+
+export interface SupportedControls {
+  brightness: CameraControlInfo;
+  contrast: CameraControlInfo;
+  sharpness: CameraControlInfo;
+  gain: CameraControlInfo;
+  gamma: CameraControlInfo;
+  saturation: CameraControlInfo;
+  hue: CameraControlInfo;
+  zoom: CameraControlInfo;
 }
 
 // ── View Props ───────────────────────────────────────────────────────────
@@ -65,6 +89,8 @@ export interface UsbCameraViewProps {
   onCameraOpened?: (event: CameraOpenedEvent) => void;
   /** Called when camera preview stops */
   onCameraClosed?: (event: CameraClosedEvent) => void;
+  /** Called when camera is loading (e.g. resolution change) */
+  onCameraLoading?: (event: CameraLoadingEvent) => void;
   /** Called on camera error */
   onError?: (event: CameraErrorEvent) => void;
   /** Children to render on unsupported platforms (iOS). If not provided, a default message is shown. */
@@ -78,9 +104,12 @@ export interface UsbCameraModuleInterface {
   getDeviceList(): Promise<UsbDevice[]>;
   requestPermission(deviceId: number): Promise<boolean>;
   isCameraOpened(): Promise<boolean>;
+  openCamera(): Promise<void>;
+  closeCamera(): Promise<void>;
 
   // Preview
   getAllPreviewSizes(): Promise<PreviewSize[]>;
+  getCurrentResolution(): Promise<PreviewSize>;
   updateResolution(width: number, height: number): Promise<void>;
 
   // Capture
@@ -96,6 +125,7 @@ export interface UsbCameraModuleInterface {
   stopAudioRecording(): Promise<void>;
 
   // Camera controls
+  getSupportedControls(): Promise<SupportedControls>;
   setBrightness(value: number): void;
   getBrightness(): Promise<number>;
   setContrast(value: number): void;

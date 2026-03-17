@@ -3,17 +3,19 @@ import type {
   UsbCameraModuleInterface,
   UsbDevice,
   PreviewSize,
+  SupportedControls,
   UsbCameraEventType,
   RecordingCompleteEvent,
   AudioRecordingCompleteEvent,
 } from './types';
 
-const UNSUPPORTED_ERROR = 'rn-usb-camera is only supported on Android. USB UVC cameras require Android USB Host API.';
+const UNSUPPORTED_ERROR =
+  'rn-usb-camera is only supported on Android. USB UVC cameras require Android USB Host API.';
 
 const LINKING_ERROR =
-  `The package 'rn-usb-camera' doesn't seem to be linked. Make sure:\n\n` +
-  Platform.select({ android: '- You have added RnUsbCameraPackage to getPackages() in MainApplication\n' }) +
-  '- You rebuilt the app after installing the package';
+  "The package 'rn-usb-camera' doesn't seem to be linked. Make sure:\n\n" +
+  '- You rebuilt the app after installing the package\n' +
+  '- You are not using Expo Go\n';
 
 /** Whether the current platform supports USB cameras */
 export const isSupported = Platform.OS === 'android';
@@ -31,13 +33,13 @@ const NativeModule =
           get() {
             throw new Error(LINKING_ERROR);
           },
-        }
+        },
       )
     : null;
 
 const eventEmitter =
-  Platform.OS === 'android' && NativeModule != null
-    ? new NativeEventEmitter(NativeModule)
+  Platform.OS === 'android' && NativeModules.RnUsbCamera != null
+    ? new NativeEventEmitter(NativeModules.RnUsbCamera)
     : null;
 
 export const UsbCamera: UsbCameraModuleInterface & {
@@ -66,11 +68,23 @@ export const UsbCamera: UsbCameraModuleInterface & {
     if (!isSupported) return Promise.resolve(false);
     return NativeModule!.isCameraOpened();
   },
+  openCamera(): Promise<void> {
+    if (!isSupported) return unsupportedPromise(undefined);
+    return NativeModule!.openCamera();
+  },
+  closeCamera(): Promise<void> {
+    if (!isSupported) return unsupportedPromise(undefined);
+    return NativeModule!.closeCamera();
+  },
 
   // ── Preview ───────────────────────────────────────────────────────────
   getAllPreviewSizes(): Promise<PreviewSize[]> {
     if (!isSupported) return Promise.resolve([]);
     return NativeModule!.getAllPreviewSizes();
+  },
+  getCurrentResolution(): Promise<PreviewSize> {
+    if (!isSupported) return unsupportedPromise({ width: 0, height: 0 });
+    return NativeModule!.getCurrentResolution();
   },
   updateResolution(width: number, height: number): Promise<void> {
     if (!isSupported) return unsupportedPromise(undefined);
@@ -108,6 +122,10 @@ export const UsbCamera: UsbCameraModuleInterface & {
   },
 
   // ── Camera Controls ───────────────────────────────────────────────────
+  getSupportedControls(): Promise<SupportedControls> {
+    if (!isSupported) return unsupportedPromise({} as SupportedControls);
+    return NativeModule!.getSupportedControls();
+  },
   setBrightness(value: number) {
     if (!isSupported) return;
     NativeModule!.setBrightness(value);
@@ -188,7 +206,6 @@ export const UsbCamera: UsbCameraModuleInterface & {
   // ── Events ────────────────────────────────────────────────────────────
   addListener(event: UsbCameraEventType, callback: (data: any) => void) {
     if (!isSupported || eventEmitter == null) {
-      // Return a no-op subscription on unsupported platforms
       return { remove() {} };
     }
     return eventEmitter.addListener(event, callback);

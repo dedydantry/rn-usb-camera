@@ -39,8 +39,9 @@ class RnUsbCameraViewManager : SimpleViewManager<RnUsbCameraView>() {
             .put("onDeviceDetached", MapBuilder.of("registrationName", "onDeviceDetached"))
             .put("onCameraOpened", MapBuilder.of("registrationName", "onCameraOpened"))
             .put("onCameraClosed", MapBuilder.of("registrationName", "onCameraClosed"))
+            .put("onCameraLoading", MapBuilder.of("registrationName", "onCameraLoading"))
             .put("onError", MapBuilder.of("registrationName", "onError"))
-            .build()
+            .build().toMutableMap()
     }
 
     companion object {

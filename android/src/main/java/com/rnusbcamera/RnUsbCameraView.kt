@@ -33,6 +33,8 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
     var previewHeight: Int = 480
     var autoOpen: Boolean = true
 
+    fun getTextureView(): AspectRatioTextureView? = textureView
+
     init {
         textureView = AspectRatioTextureView(reactContext)
         addView(textureView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -102,6 +104,10 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
                             mainHandler.post {
                                 when (code) {
                                     ICameraStateCallBack.State.OPENED -> {
+                                        // Re-set CameraHolder on every open (including after updateResolution)
+                                        camera = self
+                                        CameraHolder.camera = self
+                                        CameraHolder.cameraView = this@RnUsbCameraView
                                         sendEvent("onCameraOpened", Arguments.createMap())
                                     }
                                     ICameraStateCallBack.State.CLOSED -> {
@@ -122,7 +128,7 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
                         .setPreviewHeight(previewHeight)
                         .setRenderMode(CameraRequest.RenderMode.OPENGL)
                         .setDefaultRotateType(RotateType.ANGLE_0)
-                        .setAudioSource(CameraRequest.AudioSource.SOURCE_AUTO)
+                        .setAudioSource(CameraRequest.AudioSource.SOURCE_SYS_MIC)
                         .setPreviewFormat(CameraRequest.PreviewFormat.FORMAT_MJPEG)
                         .create()
 
@@ -136,6 +142,7 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
 
             override fun onDisConnectDec(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
                 closeCurrentCamera()
+                clearCameraState()
             }
 
             override fun onCancelDev(device: UsbDevice?) {
@@ -147,6 +154,12 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
 
     private fun closeCurrentCamera() {
         camera?.closeCamera()
+        // Don't null out camera/CameraHolder here — updateResolution calls
+        // closeCamera() internally then re-opens. We only clear on disconnect.
+    }
+
+    /** Called when USB device is fully disconnected */
+    private fun clearCameraState() {
         camera = null
         CameraHolder.camera = null
         CameraHolder.cameraView = null
@@ -155,9 +168,7 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
     private fun unregisterUsbMonitor() {
         cameraMap.values.forEach { it.closeCamera() }
         cameraMap.clear()
-        camera = null
-        CameraHolder.camera = null
-        CameraHolder.cameraView = null
+        clearCameraState()
         CameraHolder.client = null
         multiCameraClient?.unRegister()
         multiCameraClient?.destroy()
@@ -171,6 +182,27 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
 
     fun onDropView() {
         unregisterUsbMonitor()
+    }
+
+    fun sendLoadingEvent() {
+        mainHandler.post {
+            sendEvent("onCameraLoading", Arguments.createMap())
+        }
+    }
+
+    fun openCameraFromModule() {
+        val cam = camera ?: cameraMap.values.firstOrNull() ?: return
+        val request = CameraRequest.Builder()
+            .setPreviewWidth(previewWidth)
+            .setPreviewHeight(previewHeight)
+            .setRenderMode(CameraRequest.RenderMode.OPENGL)
+            .setDefaultRotateType(RotateType.ANGLE_0)
+            .setAudioSource(CameraRequest.AudioSource.SOURCE_SYS_MIC)
+            .setPreviewFormat(CameraRequest.PreviewFormat.FORMAT_MJPEG)
+            .create()
+        cam.openCamera(textureView, request)
+        camera = cam
+        CameraHolder.camera = cam
     }
 
     fun getCamera(): MultiCameraClient.ICamera? = camera

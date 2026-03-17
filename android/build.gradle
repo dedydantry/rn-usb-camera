@@ -20,17 +20,17 @@ android {
     compileSdkVersion safeExtGet('compileSdkVersion', 34)
 
     defaultConfig {
-        minSdkVersion safeExtGet('minSdkVersion', 23)
+        minSdkVersion safeExtGet('minSdkVersion', 24)
         targetSdkVersion safeExtGet('targetSdkVersion', 34)
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 }
 
@@ -44,8 +44,8 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-android:+"
 
-    // AUSBC USB Camera library via JitPack
-    implementation "com.github.ernestp.AndroidUSBCamera:libausbc:v3.4.5"
-    implementation "com.github.ernestp.AndroidUSBCamera:libuvc:v3.4.5"
-    implementation "com.github.ernestp.AndroidUSBCamera:libnative:v3.4.5"
+    // AUSBC USB Camera library (local project with Android 10+ MediaStore fix)
+    implementation project(':libausbc')
+    implementation project(':libuvc')
+    implementation project(':libnative')
 }

@@ -1,6 +1,7 @@
 package com.rnusbcamera
 
 import android.hardware.usb.UsbDevice
+import java.io.File
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.jiangdg.ausbc.callback.ICaptureCallBack
@@ -64,6 +65,38 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
         promise.resolve(CameraHolder.isReady())
     }
 
+    @ReactMethod
+    fun openCamera(promise: Promise) {
+        try {
+            val view = CameraHolder.cameraView ?: run {
+                promise.reject("ERR_NO_VIEW", "UsbCameraView not mounted")
+                return
+            }
+            if (CameraHolder.isReady()) {
+                promise.resolve(null)
+                return
+            }
+            view.openCameraFromModule()
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("ERR_OPEN_CAMERA", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun closeCamera(promise: Promise) {
+        try {
+            val camera = CameraHolder.camera ?: run {
+                promise.resolve(null)
+                return
+            }
+            camera.closeCamera()
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("ERR_CLOSE_CAMERA", e.message, e)
+        }
+    }
+
     // ── Preview Sizes ────────────────────────────────────────────────────
 
     @ReactMethod
@@ -88,12 +121,31 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun getCurrentResolution(promise: Promise) {
+        try {
+            val request = CameraHolder.camera?.getCameraRequest()
+            if (request == null) {
+                promise.reject("ERR_NO_CAMERA", "Camera not opened")
+                return
+            }
+            promise.resolve(Arguments.createMap().apply {
+                putInt("width", request.previewWidth)
+                putInt("height", request.previewHeight)
+            })
+        } catch (e: Exception) {
+            promise.reject("ERR_RESOLUTION", e.message, e)
+        }
+    }
+
+    @ReactMethod
     fun updateResolution(width: Int, height: Int, promise: Promise) {
         try {
             val camera = CameraHolder.camera ?: run {
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
                 return
             }
+            // Fire loading event on the view before resolution change
+            CameraHolder.cameraView?.sendLoadingEvent()
             camera.updateResolution(width, height)
             promise.resolve(null)
         } catch (e: Exception) {
@@ -103,44 +155,82 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
 
     // ── Image Capture ────────────────────────────────────────────────────
 
+    /**
+     * Creates a temp output file following react-native-vision-camera pattern.
+     * - Uses File.createTempFile() for atomic unique file creation
+     * - If path is provided, treats it as the target directory
+     * - If path is null, defaults to cacheDir
+     * - Cache files are marked deleteOnExit() for auto-cleanup
+     */
+    private fun createOutputFile(customPath: String?, prefix: String, extension: String): File {
+        val directory = if (customPath != null) {
+            val dir = File(customPath)
+            if (dir.isFile) dir.parentFile ?: reactApplicationContext.cacheDir
+            else dir
+        } else {
+            reactApplicationContext.cacheDir
+        }
+
+        if (!directory.exists()) directory.mkdirs()
+
+        val file = File.createTempFile(prefix, ".$extension", directory)
+
+        // Auto-delete temp files in cache dir when app process exits (Vision Camera pattern)
+        if (directory.absolutePath.contains(reactApplicationContext.cacheDir.absolutePath)) {
+            file.deleteOnExit()
+        }
+
+        return file
+    }
+
     @ReactMethod
     fun captureImage(path: String?, promise: Promise) {
-        val camera = CameraHolder.camera ?: run {
-            promise.reject("ERR_NO_CAMERA", "Camera not opened")
-            return
+        try {
+            val camera = CameraHolder.camera ?: run {
+                promise.reject("ERR_NO_CAMERA", "Camera not opened")
+                return
+            }
+            val outputFile = createOutputFile(path, "IMG_", "jpg")
+            camera.captureImage(object : ICaptureCallBack {
+                override fun onBegin() {}
+                override fun onError(error: String?) {
+                    promise.reject("ERR_CAPTURE", error ?: "Capture failed")
+                }
+                override fun onComplete(filePath: String?) {
+                    promise.resolve(filePath ?: outputFile.absolutePath)
+                }
+            }, outputFile.absolutePath)
+        } catch (e: Exception) {
+            promise.reject("ERR_CAPTURE", e.message ?: "Capture failed", e)
         }
-        camera.captureImage(object : ICaptureCallBack {
-            override fun onBegin() {}
-            override fun onError(error: String?) {
-                promise.reject("ERR_CAPTURE", error ?: "Capture failed")
-            }
-            override fun onComplete(filePath: String?) {
-                promise.resolve(filePath)
-            }
-        }, path)
     }
 
     // ── Video Recording ──────────────────────────────────────────────────
 
     @ReactMethod
     fun startRecording(path: String?, durationSec: Int, promise: Promise) {
-        val camera = CameraHolder.camera ?: run {
-            promise.reject("ERR_NO_CAMERA", "Camera not opened")
-            return
+        try {
+            val camera = CameraHolder.camera ?: run {
+                promise.reject("ERR_NO_CAMERA", "Camera not opened")
+                return
+            }
+            val outputFile = createOutputFile(path, "VID_", "mp4")
+            camera.captureVideoStart(object : ICaptureCallBack {
+                override fun onBegin() {
+                    promise.resolve(null)
+                }
+                override fun onError(error: String?) {
+                    promise.reject("ERR_RECORDING", error ?: "Recording failed")
+                }
+                override fun onComplete(filePath: String?) {
+                    sendJSEvent("onRecordingComplete", Arguments.createMap().apply {
+                        putString("path", filePath ?: outputFile.absolutePath)
+                    })
+                }
+            }, outputFile.absolutePath, durationSec.toLong())
+        } catch (e: Exception) {
+            promise.reject("ERR_RECORDING", e.message ?: "Recording failed", e)
         }
-        camera.captureVideoStart(object : ICaptureCallBack {
-            override fun onBegin() {
-                promise.resolve(null)
-            }
-            override fun onError(error: String?) {
-                promise.reject("ERR_RECORDING", error ?: "Recording failed")
-            }
-            override fun onComplete(filePath: String?) {
-                sendJSEvent("onRecordingComplete", Arguments.createMap().apply {
-                    putString("path", filePath)
-                })
-            }
-        }, path, durationSec.toLong())
     }
 
     @ReactMethod
@@ -166,23 +256,28 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun startAudioRecording(path: String?, promise: Promise) {
-        val camera = CameraHolder.camera ?: run {
-            promise.reject("ERR_NO_CAMERA", "Camera not opened")
-            return
+        try {
+            val camera = CameraHolder.camera ?: run {
+                promise.reject("ERR_NO_CAMERA", "Camera not opened")
+                return
+            }
+            val outputFile = createOutputFile(path, "AUD_", "mp3")
+            camera.captureAudioStart(object : ICaptureCallBack {
+                override fun onBegin() {
+                    promise.resolve(null)
+                }
+                override fun onError(error: String?) {
+                    promise.reject("ERR_AUDIO", error ?: "Audio recording failed")
+                }
+                override fun onComplete(filePath: String?) {
+                    sendJSEvent("onAudioRecordingComplete", Arguments.createMap().apply {
+                        putString("path", filePath ?: outputFile.absolutePath)
+                    })
+                }
+            }, outputFile.absolutePath)
+        } catch (e: Exception) {
+            promise.reject("ERR_AUDIO", e.message ?: "Audio recording failed", e)
         }
-        camera.captureAudioStart(object : ICaptureCallBack {
-            override fun onBegin() {
-                promise.resolve(null)
-            }
-            override fun onError(error: String?) {
-                promise.reject("ERR_AUDIO", error ?: "Audio recording failed")
-            }
-            override fun onComplete(filePath: String?) {
-                sendJSEvent("onAudioRecordingComplete", Arguments.createMap().apply {
-                    putString("path", filePath)
-                })
-            }
-        }, path)
     }
 
     @ReactMethod
@@ -196,6 +291,36 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     }
 
     // ── UVC Camera Controls ──────────────────────────────────────────────
+
+    @ReactMethod
+    fun getSupportedControls(promise: Promise) {
+        val cam = CameraHolder.camera as? CameraUVC
+        if (cam == null) {
+            promise.reject("ERR_NO_CAMERA", "Camera not opened")
+            return
+        }
+
+        fun controlInfo(min: Int?, max: Int?, current: Int?): WritableMap {
+            val supported = (min != null && max != null && min != max)
+            return Arguments.createMap().apply {
+                putBoolean("supported", supported)
+                putInt("min", min ?: 0)
+                putInt("max", max ?: 0)
+                putInt("current", current ?: 0)
+            }
+        }
+
+        promise.resolve(Arguments.createMap().apply {
+            putMap("brightness", controlInfo(cam.getBrightnessMin(), cam.getBrightnessMax(), cam.getBrightness()))
+            putMap("contrast", controlInfo(cam.getContrastMin(), cam.getContrastMax(), cam.getContrast()))
+            putMap("sharpness", controlInfo(cam.getSharpnessMin(), cam.getSharpnessMax(), cam.getSharpness()))
+            putMap("gain", controlInfo(cam.getGainMin(), cam.getGainMax(), cam.getGain()))
+            putMap("gamma", controlInfo(cam.getGammaMin(), cam.getGammaMax(), cam.getGamma()))
+            putMap("saturation", controlInfo(cam.getSaturationMin(), cam.getSaturationMax(), cam.getSaturation()))
+            putMap("hue", controlInfo(cam.getHueMin(), cam.getHueMax(), cam.getHue()))
+            putMap("zoom", controlInfo(cam.getZoomMin(), cam.getZoomMax(), cam.getZoom()))
+        })
+    }
 
     @ReactMethod
     fun setBrightness(value: Int) {
