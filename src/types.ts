@@ -17,6 +17,16 @@ export interface PreviewSize {
   height: number;
 }
 
+export type PreviewRotation =
+  | '0'
+  | '90'
+  | '180'
+  | '270'
+  | 'flipVertical'
+  | 'flipHorizontal';
+
+export type PreviewResizeMode = 'cover' | 'contain';
+
 // ── Events ───────────────────────────────────────────────────────────────
 
 export interface DeviceAttachedEvent {
@@ -79,6 +89,10 @@ export interface UsbCameraViewProps {
   previewWidth?: number;
   /** Preview height in pixels (default: 480) */
   previewHeight?: number;
+  /** Preview rotation or flip applied by the native renderer (default: '0') */
+  previewRotation?: PreviewRotation;
+  /** How the native preview should fit inside the view bounds (default: 'cover') */
+  resizeMode?: PreviewResizeMode;
   /** Auto-open camera when USB device is attached (default: true) */
   autoOpen?: boolean;
   /** Called when a USB camera device is attached */

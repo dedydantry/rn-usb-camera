@@ -62,7 +62,30 @@ protected List<ReactPackage> getPackages() {
 }
 ```
 
-#### 3. USB host feature (optional)
+#### 3. Native AUSBC artifacts
+
+This package resolves AUSBC from one of these sources:
+
+- a sibling `AndroidUSBCamera` checkout published to a local Maven repo at `../AndroidUSBCamera/build/repo` (preferred when available)
+- bundled release AARs in `android/libs`
+- a custom local Maven repo path via Gradle property `rnUsbCameraAusbcRepoDir` or env `RN_USB_CAMERA_AUSBC_REPO_DIR`
+
+The Expo Android example can also include a sibling `AndroidUSBCamera` checkout directly as a Gradle composite build, so `npx expo run:android` resolves `libausbc`, `libuvc`, and `libnative` from source without going through JitPack.
+
+If you are updating the native AUSBC source, rebuild and publish it first:
+
+```bash
+cd ../AndroidUSBCamera
+./gradlew publishAllPublicationsToLocalBuildRepoRepository
+```
+
+Or from this repo, run the helper script to publish the local Maven repo and refresh bundled fallback AARs in one step:
+
+```bash
+npm run sync:ausbc
+```
+
+#### 4. USB host feature (optional)
 
 The library's `AndroidManifest.xml` already declares `android.hardware.usb.host` (with `required="false"`). If your app **requires** a USB host, you can add this to your app's `AndroidManifest.xml`:
 
@@ -70,7 +93,7 @@ The library's `AndroidManifest.xml` already declares `android.hardware.usb.host`
 <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 ```
 
-#### 4. Rebuild
+#### 5. Rebuild
 
 ```bash
 npx react-native run-android
@@ -99,6 +122,7 @@ export default function App() {
         style={{ flex: 1 }}
         previewWidth={1280}
         previewHeight={720}
+        previewRotation="90"
         autoOpen={true}
         onCameraOpened={() => console.log('Camera opened')}
         onError={(e) => console.warn('Camera error:', e.nativeEvent.message)}
@@ -108,6 +132,16 @@ export default function App() {
   );
 }
 ```
+
+## Example App
+
+An Expo bare example app is included in [example/README.md](./example/README.md).
+
+It uses:
+
+- Expo SDK 54
+- React Native 0.81
+- New Architecture enabled
 
 ## API Reference
 
@@ -122,6 +156,7 @@ Native camera preview component.
 | `style` | `ViewStyle` | — | View style |
 | `previewWidth` | `number` | `640` | Camera preview width in pixels |
 | `previewHeight` | `number` | `480` | Camera preview height in pixels |
+| `previewRotation` | `'0' \| '90' \| '180' \| '270' \| 'flipVertical' \| 'flipHorizontal'` | `'0'` | Rotates or flips the native preview for webcams mounted sideways or inverted |
 | `autoOpen` | `boolean` | `true` | Automatically open camera when USB device is attached |
 | `onDeviceAttached` | `(event) => void` | — | Called when a USB camera is plugged in. `event.nativeEvent` contains `{ deviceId, vendorId, productId, deviceName }` |
 | `onDeviceDetached` | `(event) => void` | — | Called when a USB camera is unplugged. `event.nativeEvent` contains `{ deviceId }` |
@@ -349,6 +384,12 @@ import type {
 - Try lowering the resolution: `previewWidth={640} previewHeight={480}`
 - Switch preview format — some cameras only support YUYV, not MJPEG
 - Check `onError` callback for specific error messages
+
+### Webcam orientation is wrong
+
+- Set `previewRotation="90"` or `previewRotation="270"` for webcams mounted vertically
+- Use `previewRotation="180"` if the image is upside down
+- Use `flipVertical` or `flipHorizontal` only when the feed is mirrored rather than rotated
 
 ### Build errors
 

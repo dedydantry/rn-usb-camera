@@ -20,12 +20,22 @@ class RnUsbCameraViewManager : SimpleViewManager<RnUsbCameraView>() {
 
     @ReactProp(name = "previewWidth", defaultInt = 640)
     fun setPreviewWidth(view: RnUsbCameraView, width: Int) {
-        view.previewWidth = width
+        view.updatePreviewWidth(width)
     }
 
     @ReactProp(name = "previewHeight", defaultInt = 480)
     fun setPreviewHeight(view: RnUsbCameraView, height: Int) {
-        view.previewHeight = height
+        view.updatePreviewHeight(height)
+    }
+
+    @ReactProp(name = "previewRotation")
+    fun setPreviewRotation(view: RnUsbCameraView, rotation: String?) {
+        view.setPreviewRotation(rotation)
+    }
+
+    @ReactProp(name = "resizeMode")
+    fun setResizeMode(view: RnUsbCameraView, resizeMode: String?) {
+        view.setResizeMode(resizeMode)
     }
 
     @ReactProp(name = "autoOpen", defaultBoolean = true)

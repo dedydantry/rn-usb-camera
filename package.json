@@ -13,6 +13,7 @@
     "!**/__tests__"
   ],
   "scripts": {
+    "sync:ausbc": "./scripts/sync-ausbc.sh",
     "typescript": "tsc --noEmit"
   },
   "codegenConfig": {

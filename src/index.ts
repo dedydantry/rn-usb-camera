@@ -3,6 +3,7 @@ export { UsbCamera, isSupported } from './NativeUsbCameraModule';
 export type {
   UsbDevice,
   PreviewSize,
+  PreviewRotation,
   UsbCameraViewProps,
   DeviceAttachedEvent,
   DeviceDetachedEvent,

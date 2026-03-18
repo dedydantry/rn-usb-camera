@@ -32,6 +32,7 @@ const NativeView =
  *   style={{ flex: 1 }}
  *   previewWidth={1280}
  *   previewHeight={720}
+ *   resizeMode="cover"
  *   autoOpen={true}
  *   onDeviceAttached={(e) => console.log('Attached:', e.nativeEvent)}
  *   onCameraOpened={() => console.log('Camera opened')}

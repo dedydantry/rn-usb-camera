@@ -1,4 +1,14 @@
 {
-  "name": "RnUsbCameraExample",
-  "displayName": "RnUsbCameraExample"
+  "expo": {
+    "name": "rn-usb-camera-example",
+    "slug": "rn-usb-camera-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "android": {
+      "package": "com.rnusbcamera.example"
+    },
+    "ios": {
+      "bundleIdentifier": "com.rnusbcamera.example"
+    }
+  }
 }

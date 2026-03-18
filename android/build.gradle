@@ -16,6 +16,58 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'com.facebook.react'
 
+def resolveDirectory = { String rawPath ->
+    if (!rawPath) {
+        return null
+    }
+
+    def candidate = file(rawPath)
+    if (candidate.isAbsolute()) {
+        return candidate
+    }
+
+    def rootRelativeCandidate = new File(rootProject.projectDir, rawPath)
+    return rootRelativeCandidate.exists() ? rootRelativeCandidate : candidate
+}
+
+def firstExistingDirectory = { List<File> candidates ->
+    candidates.find { it != null && it.exists() }
+}
+
+def configuredAusbcRepoDir = providers.gradleProperty('rnUsbCameraAusbcRepoDir')
+    .orElse(providers.environmentVariable('RN_USB_CAMERA_AUSBC_REPO_DIR'))
+    .orNull
+def configuredRepoCandidate = configuredAusbcRepoDir ? resolveDirectory(configuredAusbcRepoDir) : null
+def projectRelativeRepoCandidate = file("$projectDir/../../AndroidUSBCamera/build/repo")
+def rootRelativeRepoCandidate = new File(rootProject.projectDir, '../../../AndroidUSBCamera/build/repo')
+def ausbcRepoDir = firstExistingDirectory([
+    configuredRepoCandidate,
+    projectRelativeRepoCandidate,
+    rootRelativeRepoCandidate,
+]) ?: configuredRepoCandidate ?: projectRelativeRepoCandidate
+def bundledAusbcAars = [
+    file("$projectDir/libs/libausbc-release.aar"),
+    file("$projectDir/libs/libuvc-release.aar"),
+    file("$projectDir/libs/libnative-release.aar"),
+]
+def useBundledAusbcAars = bundledAusbcAars.every { it.exists() }
+def useLocalAusbcMavenRepo = ausbcRepoDir.exists()
+def useBundledAusbcAarFallback = !useLocalAusbcMavenRepo && useBundledAusbcAars
+
+def addAusbcRepositories = { handler ->
+    if (useLocalAusbcMavenRepo) {
+        handler.maven {
+            url = uri(ausbcRepoDir)
+        }
+    }
+
+    if (useBundledAusbcAarFallback) {
+        handler.flatDir {
+            dirs "$projectDir/libs"
+        }
+    }
+}
+
 android {
     namespace "com.rnusbcamera"
     compileSdkVersion safeExtGet('compileSdkVersion', 34)
@@ -44,14 +96,31 @@ android {
 repositories {
     google()
     mavenCentral()
+    addAusbcRepositories(delegate)
+}
+
+rootProject.allprojects {
+    repositories {
+        addAusbcRepositories(delegate)
+    }
 }
 
 dependencies {
     // React Native (version substituted by RNGP)
     implementation "com.facebook.react:react-android"
 
-    // AUSBC USB Camera library (extracted JARs + JNI bundled directly)
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    if (useLocalAusbcMavenRepo) {
+        implementation "com.github.ernestp:libausbc:3.4.5"
+        compileOnly "com.github.ernestp:libuvc:3.4.5"
+    } else if (useBundledAusbcAarFallback) {
+        implementation(name: 'libausbc-release', ext: 'aar')
+        implementation(name: 'libuvc-release', ext: 'aar')
+        implementation(name: 'libnative-release', ext: 'aar')
+    } else {
+        throw new GradleException(
+            "AUSBC artifacts not found. Publish AndroidUSBCamera to ${ausbcRepoDir} or add libausbc-release.aar, libuvc-release.aar, and libnative-release.aar to android/libs."
+        )
+    }
 
     // Transitive dependencies required by AUSBC
     implementation "androidx.appcompat:appcompat:1.3.1"

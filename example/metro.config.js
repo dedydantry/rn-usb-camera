@@ -1,22 +1,12 @@
+// Learn more https://docs.expo.io/guides/customizing-metro
 const path = require('path');
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
 
-const libraryRoot = path.resolve(__dirname, '..');
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(__dirname);
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('metro-config').MetroConfig}
- */
-const config = {
-  watchFolders: [libraryRoot],
-  resolver: {
-    nodeModulesPaths: [
-      path.resolve(__dirname, 'node_modules'),
-      path.resolve(libraryRoot, 'node_modules'),
-    ],
-  },
-};
+config.watchFolders = [path.resolve(__dirname, '..')];
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.nodeModulesPaths = [path.resolve(__dirname, 'node_modules')];
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = config;
