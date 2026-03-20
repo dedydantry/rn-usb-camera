@@ -38,6 +38,14 @@ export const UsbCamera: UsbCameraModuleInterface & {
   /** Whether the current platform supports USB cameras (Android only) */
   isSupported: boolean;
   addListener(
+    event: 'onDeviceAttached',
+    callback: (data: UsbDevice) => void
+  ): { remove(): void };
+  addListener(
+    event: 'onDeviceDetached',
+    callback: (data: { deviceId: number }) => void
+  ): { remove(): void };
+  addListener(
     event: 'onRecordingComplete',
     callback: (data: RecordingCompleteEvent) => void
   ): { remove(): void };

@@ -164,5 +164,7 @@ export interface UsbCameraModuleInterface {
 // ── Module Events ────────────────────────────────────────────────────────
 
 export type UsbCameraEventType =
+  | 'onDeviceAttached'
+  | 'onDeviceDetached'
   | 'onRecordingComplete'
   | 'onAudioRecordingComplete';

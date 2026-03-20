@@ -11,11 +11,32 @@ import type { UsbCameraViewProps } from './types';
 
 const COMPONENT_NAME = 'RnUsbCameraView';
 
-const NativeView =
-  Platform.OS === 'android' &&
-  UIManager.getViewManagerConfig(COMPONENT_NAME) != null
-    ? requireNativeComponent<UsbCameraViewProps>(COMPONENT_NAME)
-    : null;
+let cachedNativeView: React.ComponentType<UsbCameraViewProps> | null | undefined;
+
+function resolveNativeView(): React.ComponentType<UsbCameraViewProps> | null {
+  if (Platform.OS !== 'android') {
+    return null;
+  }
+
+  if (cachedNativeView !== undefined) {
+    return cachedNativeView;
+  }
+
+  try {
+    const hasViewManagerConfig =
+      typeof UIManager.getViewManagerConfig === 'function' &&
+      UIManager.getViewManagerConfig(COMPONENT_NAME) != null;
+
+    cachedNativeView = hasViewManagerConfig
+      ? requireNativeComponent<UsbCameraViewProps>(COMPONENT_NAME)
+      : null;
+  } catch (error) {
+    console.warn(`[rn-usb-camera] Failed to resolve ${COMPONENT_NAME}`, error);
+    cachedNativeView = null;
+  }
+
+  return cachedNativeView;
+}
 
 /**
  * USB Camera preview component.
@@ -47,6 +68,7 @@ const NativeView =
  */
 export const UsbCameraView: React.FC<UsbCameraViewProps> = (props) => {
   const { style, children, ...rest } = props;
+  const NativeView = resolveNativeView();
 
   if (Platform.OS !== 'android' || NativeView == null) {
     return (

@@ -113,9 +113,9 @@ dependencies {
         implementation "com.github.ernestp:libausbc:3.4.5"
         compileOnly "com.github.ernestp:libuvc:3.4.5"
     } else if (useBundledAusbcAarFallback) {
-        implementation(name: 'libausbc-release', ext: 'aar')
-        implementation(name: 'libuvc-release', ext: 'aar')
-        implementation(name: 'libnative-release', ext: 'aar')
+        implementation(files("$projectDir/libs/libausbc-release.aar"))
+        implementation(files("$projectDir/libs/libuvc-release.aar"))
+        implementation(files("$projectDir/libs/libnative-release.aar"))
     } else {
         throw new GradleException(
             "AUSBC artifacts not found. Publish AndroidUSBCamera to ${ausbcRepoDir} or add libausbc-release.aar, libuvc-release.aar, and libnative-release.aar to android/libs."

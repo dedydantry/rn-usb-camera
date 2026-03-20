@@ -5,8 +5,11 @@ import java.io.File
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.jiangdg.ausbc.MultiCameraClient
 import com.jiangdg.ausbc.callback.ICaptureCallBack
+import com.jiangdg.ausbc.callback.IDeviceConnectCallBack
 import com.jiangdg.ausbc.camera.CameraUVC
+import com.jiangdg.usb.USBMonitor
 
 @ReactModule(name = RnUsbCameraModule.NAME)
 class RnUsbCameraModule(reactContext: ReactApplicationContext) :
@@ -14,29 +17,105 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
 
     companion object {
         const val NAME = "RnUsbCamera"
+        private const val EVENT_DEVICE_ATTACHED = "onDeviceAttached"
+        private const val EVENT_DEVICE_DETACHED = "onDeviceDetached"
     }
 
     override fun getName(): String = NAME
+
+    @Synchronized
+    private fun destroyModuleClient() {
+        CameraHolder.moduleClient?.let { client ->
+            runCatching { client.unRegister() }
+            runCatching { client.destroy() }
+        }
+        CameraHolder.moduleClient = null
+    }
+
+    private fun usbDeviceToMap(device: UsbDevice): WritableMap {
+        return Arguments.createMap().apply {
+            putInt("deviceId", device.deviceId)
+            putInt("vendorId", device.vendorId)
+            putInt("productId", device.productId)
+            putString("deviceName", device.deviceName)
+        }
+    }
+
+    @Synchronized
+    private fun ensureModuleClient(): MultiCameraClient {
+        CameraHolder.moduleClient?.let { return it }
+
+        val client = MultiCameraClient(reactApplicationContext, object : IDeviceConnectCallBack {
+            override fun onAttachDev(device: UsbDevice?) {
+                device ?: return
+                sendJSEvent(EVENT_DEVICE_ATTACHED, usbDeviceToMap(device))
+            }
+
+            override fun onDetachDec(device: UsbDevice?) {
+                device ?: return
+                sendJSEvent(EVENT_DEVICE_DETACHED, Arguments.createMap().apply {
+                    putInt("deviceId", device.deviceId)
+                })
+            }
+
+            override fun onConnectDev(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) = Unit
+
+            override fun onDisConnectDec(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) = Unit
+
+            override fun onCancelDev(device: UsbDevice?) = Unit
+        })
+
+        client.register()
+        CameraHolder.moduleClient = client
+        return client
+    }
+
+    private fun isDestroyedClientError(error: Throwable): Boolean {
+        val message = error.message ?: return false
+        return message.contains("already destroyed", ignoreCase = true)
+    }
+
+    private inline fun <T> withFreshModuleClient(block: (MultiCameraClient) -> T): T {
+        try {
+            return block(ensureModuleClient())
+        } catch (error: Exception) {
+            if (!isDestroyedClientError(error)) {
+                throw error
+            }
+
+            destroyModuleClient()
+            return block(ensureModuleClient())
+        }
+    }
+
+    private inline fun <T> withAvailablePermissionClient(block: (MultiCameraClient) -> T): T {
+        val activeViewClient = CameraHolder.client
+        if (activeViewClient != null) {
+            try {
+                return block(activeViewClient)
+            } catch (error: Exception) {
+                if (!isDestroyedClientError(error)) {
+                    throw error
+                }
+
+                CameraHolder.client = null
+            }
+        }
+
+        return withFreshModuleClient(block)
+    }
 
     // ── Device List ──────────────────────────────────────────────────────
 
     @ReactMethod
     override fun getDeviceList(promise: Promise) {
         try {
-            val client = CameraHolder.client
-            if (client == null) {
-                promise.resolve(Arguments.createArray())
-                return
+            val devices = withFreshModuleClient { client ->
+                client.getDeviceList(null) ?: emptyList<UsbDevice>()
             }
-            val devices = client.getDeviceList(null) ?: emptyList<UsbDevice>()
             val result = Arguments.createArray()
             for (device in devices) {
-                result.pushMap(Arguments.createMap().apply {
-                    putInt("deviceId", device.deviceId)
-                    putInt("vendorId", device.vendorId)
-                    putInt("productId", device.productId)
-                    putString("deviceName", device.deviceName)
-                })
+                result.pushMap(usbDeviceToMap(device))
             }
             promise.resolve(result)
         } catch (e: Exception) {
@@ -48,18 +127,16 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
     override fun requestPermission(deviceId: Double, promise: Promise) {
         try {
             val id = deviceId.toInt()
-            val client = CameraHolder.client ?: run {
-                promise.reject("ERR_NO_CLIENT", "USB client not initialized. Mount UsbCameraView first.")
-                return
+            val result = withAvailablePermissionClient { client ->
+                val devices = client.getDeviceList(null) ?: emptyList()
+                val device = devices.find { it.deviceId == id }
+                    ?: throw IllegalStateException("Device with id $id not found")
+
+                client.requestPermission(device)
             }
-            val devices = client.getDeviceList(null) ?: emptyList()
-            val device = devices.find { it.deviceId == id }
-            if (device == null) {
-                promise.reject("ERR_DEVICE_NOT_FOUND", "Device with id $id not found")
-                return
-            }
-            val result = client.requestPermission(device)
             promise.resolve(result)
+        } catch (e: IllegalStateException) {
+            promise.reject("ERR_DEVICE_NOT_FOUND", e.message, e)
         } catch (e: Exception) {
             promise.reject("ERR_PERMISSION", e.message, e)
         }
@@ -151,9 +228,13 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
                 promise.reject("ERR_NO_CAMERA", "Camera not opened")
                 return
             }
+            val targetWidth = width.toInt()
+            val targetHeight = height.toInt()
             // Fire loading event on the view before resolution change
             CameraHolder.cameraView?.sendLoadingEvent()
-            camera.updateResolution(width.toInt(), height.toInt())
+            camera.updateResolution(targetWidth, targetHeight)
+            CameraHolder.setPreferredPreviewSize(targetWidth, targetHeight)
+            CameraHolder.cameraView?.onResolutionUpdated(targetWidth, targetHeight)
             promise.resolve(null)
         } catch (e: Exception) {
             promise.reject("ERR_RESOLUTION", e.message, e)
@@ -452,11 +533,20 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     override fun addListener(eventName: String) {
-        // Required for RN event emitter
+        if (eventName == EVENT_DEVICE_ATTACHED || eventName == EVENT_DEVICE_DETACHED) {
+            runCatching { ensureModuleClient() }
+                .onFailure { error ->
+                    promiseRejectWarning("ERR_USB_CLIENT", error)
+                }
+        }
     }
 
     @ReactMethod
     override fun removeListeners(count: Double) {
         // Required for RN event emitter
+    }
+
+    private fun promiseRejectWarning(code: String, error: Throwable) {
+        System.err.println("[$NAME] $code: ${error.message}")
     }
 }
