@@ -33,6 +33,16 @@ class RnUsbCameraViewManager : SimpleViewManager<RnUsbCameraView>() {
         view.setPreviewRotation(rotation)
     }
 
+    @ReactProp(name = "liveViewMirror", defaultBoolean = false)
+    fun setLiveViewMirror(view: RnUsbCameraView, enabled: Boolean) {
+        view.setLiveViewMirror(enabled)
+    }
+
+    @ReactProp(name = "captureMirror", defaultBoolean = false)
+    fun setCaptureMirror(view: RnUsbCameraView, enabled: Boolean) {
+        view.setCaptureMirror(enabled)
+    }
+
     @ReactProp(name = "resizeMode")
     fun setResizeMode(view: RnUsbCameraView, resizeMode: String?) {
         view.setResizeMode(resizeMode)

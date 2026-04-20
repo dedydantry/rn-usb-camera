@@ -40,6 +40,8 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
     private val mainHandler = Handler(Looper.getMainLooper())
     private var previewRotation: RotateType = RotateType.ANGLE_0
     private var manualPreviewRotation: RotateType? = null
+    private var liveViewMirrorEnabled: Boolean = false
+    private var captureMirrorEnabled: Boolean = false
     private var resizeMode: PreviewResizeMode = PreviewResizeMode.COVER
     private var reopenPreviewRunnable: Runnable? = null
     private var isPreviewRefreshInProgress: Boolean = false
@@ -73,6 +75,7 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
         textureView = PreviewTextureView(reactContext).apply {
             this.resizeMode = this@RnUsbCameraView.resizeMode
         }
+        applyLiveViewMirror()
         addView(textureView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
             gravity = Gravity.CENTER
         })
@@ -127,10 +130,27 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
         applyPreviewRotation(manualPreviewRotation ?: RotateType.ANGLE_0, true)
     }
 
+    fun setLiveViewMirror(enabled: Boolean) {
+        if (liveViewMirrorEnabled == enabled) return
+        liveViewMirrorEnabled = enabled
+        applyLiveViewMirror()
+    }
+
+    fun setCaptureMirror(enabled: Boolean) {
+        captureMirrorEnabled = enabled
+    }
+
+    fun shouldMirrorCapture(): Boolean = captureMirrorEnabled
+
     fun setResizeMode(mode: String?) {
         resizeMode = PreviewResizeMode.fromJsValue(mode)
         textureView?.resizeMode = resizeMode
         updatePreviewAspectRatio()
+    }
+
+    private fun applyLiveViewMirror() {
+        textureView?.scaleX = if (liveViewMirrorEnabled) -1f else 1f
+        textureView?.scaleY = 1f
     }
 
     private fun setupTextureListener() {
@@ -162,6 +182,14 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
         if (multiCameraClient != null) return
 
         Log.d(TAG, "registerUsbMonitor")
+
+        // Destroy module-level client so it doesn't hold exclusive USB access
+        CameraHolder.moduleClient?.let { moduleClient ->
+            Log.d(TAG, "registerUsbMonitor: destroying moduleClient to release USB")
+            runCatching { moduleClient.unRegister() }
+            runCatching { moduleClient.destroy() }
+            CameraHolder.moduleClient = null
+        }
 
         multiCameraClient = MultiCameraClient(reactContext, object : IDeviceConnectCallBack {
             override fun onAttachDev(device: UsbDevice?) {

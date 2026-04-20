@@ -54,6 +54,8 @@ function resolveNativeView(): React.ComponentType<UsbCameraViewProps> | null {
  *   previewWidth={1280}
  *   previewHeight={720}
  *   resizeMode="cover"
+ *   liveViewMirror={false}
+ *   captureMirror={false}
  *   autoOpen={true}
  *   onDeviceAttached={(e) => console.log('Attached:', e.nativeEvent)}
  *   onCameraOpened={() => console.log('Camera opened')}

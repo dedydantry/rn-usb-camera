@@ -1,7 +1,12 @@
 package com.rnusbcamera
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.hardware.usb.UsbDevice
+import androidx.exifinterface.media.ExifInterface
 import java.io.File
+import java.io.FileOutputStream
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
@@ -271,6 +276,75 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
         return file
     }
 
+    private fun applyExifOrientation(matrix: Matrix, orientation: Int) {
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        }
+    }
+
+    private fun mirrorCapturedImage(filePath: String) {
+        val sourceBitmap = BitmapFactory.decodeFile(filePath)
+            ?: throw IllegalStateException("Failed to decode captured image")
+
+        val matrix = Matrix()
+        val exifOrientation = runCatching {
+            ExifInterface(filePath).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+
+        applyExifOrientation(matrix, exifOrientation)
+        matrix.postScale(-1f, 1f)
+
+        val mirroredBitmap = Bitmap.createBitmap(
+            sourceBitmap,
+            0,
+            0,
+            sourceBitmap.width,
+            sourceBitmap.height,
+            matrix,
+            true
+        )
+
+        if (mirroredBitmap != sourceBitmap) {
+            sourceBitmap.recycle()
+        }
+
+        try {
+            FileOutputStream(filePath, false).use { outputStream ->
+                val didWrite = mirroredBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                outputStream.flush()
+                if (!didWrite) {
+                    throw IllegalStateException("Failed to write mirrored capture")
+                }
+            }
+            runCatching {
+                ExifInterface(filePath).apply {
+                    setAttribute(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL.toString()
+                    )
+                    saveAttributes()
+                }
+            }
+        } finally {
+            mirroredBitmap.recycle()
+        }
+    }
+
     @ReactMethod
     override fun captureImage(path: String?, promise: Promise) {
         try {
@@ -279,13 +353,23 @@ class RnUsbCameraModule(reactContext: ReactApplicationContext) :
                 return
             }
             val outputFile = createOutputFile(path, "IMG_", "jpg")
+            val shouldMirrorCapture = CameraHolder.cameraView?.shouldMirrorCapture() == true
             camera.captureImage(object : ICaptureCallBack {
                 override fun onBegin() {}
                 override fun onError(error: String?) {
                     promise.reject("ERR_CAPTURE", error ?: "Capture failed")
                 }
                 override fun onComplete(filePath: String?) {
-                    promise.resolve(filePath ?: outputFile.absolutePath)
+                    val resolvedPath = filePath ?: outputFile.absolutePath
+                    if (shouldMirrorCapture) {
+                        try {
+                            mirrorCapturedImage(resolvedPath)
+                        } catch (error: Exception) {
+                            promise.reject("ERR_CAPTURE_MIRROR", error.message ?: "Capture mirror failed", error)
+                            return
+                        }
+                    }
+                    promise.resolve(resolvedPath)
                 }
             }, outputFile.absolutePath)
         } catch (e: Exception) {

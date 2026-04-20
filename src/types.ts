@@ -91,6 +91,10 @@ export interface UsbCameraViewProps {
   previewHeight?: number;
   /** Preview rotation or flip applied by the native renderer (default: '0') */
   previewRotation?: PreviewRotation;
+  /** Mirrors the live preview horizontally (default: false) */
+  liveViewMirror?: boolean;
+  /** Mirrors the captured image horizontally before returning the file path (default: false) */
+  captureMirror?: boolean;
   /** How the native preview should fit inside the view bounds (default: 'cover') */
   resizeMode?: PreviewResizeMode;
   /** Auto-open camera when USB device is attached (default: true) */
