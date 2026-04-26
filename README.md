@@ -403,3 +403,6 @@ Powered by [AUSBC (Android USB Camera)](https://github.com/ernestp/AndroidUSBCam
 ## License
 
 Apache-2.0
+
+## build clean release 
+cd /Users/sociolla/Project/private/photobox-app/android && ./gradlew clean bundleRelease --no-daemon

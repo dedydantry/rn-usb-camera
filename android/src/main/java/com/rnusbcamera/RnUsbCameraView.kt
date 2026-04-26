@@ -295,6 +295,31 @@ class RnUsbCameraView(private val reactContext: ThemedReactContext) : FrameLayou
             }
         })
         multiCameraClient?.register()
+
+        // Devices that were already attached before this monitor registered will NOT
+        // trigger onAttachDev automatically. Query and request permission for them now.
+        mainHandler.post {
+            if (isShuttingDown || multiCameraClient == null) return@post
+            try {
+                val existingDevices = multiCameraClient?.getDeviceList(null) ?: return@post
+                for (device in existingDevices) {
+                    if (cameraMap.containsKey(device.deviceId)) continue
+                    Log.d(TAG, "registerUsbMonitor: found pre-attached device ${device.deviceId}")
+                    cameraMap[device.deviceId] = CameraUVC(reactContext, device)
+                    sendEvent("onDeviceAttached", Arguments.createMap().apply {
+                        putInt("deviceId", device.deviceId)
+                        putInt("vendorId", device.vendorId)
+                        putInt("productId", device.productId)
+                        putString("deviceName", device.deviceName)
+                    })
+                    if (autoOpen) {
+                        multiCameraClient?.requestPermission(device)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "registerUsbMonitor: failed to query pre-attached devices: ${e.message}")
+            }
+        }
     }
 
     private fun closeCurrentCamera() {
